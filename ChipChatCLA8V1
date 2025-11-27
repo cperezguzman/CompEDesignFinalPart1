@@ -1,0 +1,109 @@
+Here is a fully structural, gate‐level Verilog implementation of the exact 8-bit carry‐lookahead adder you described.  It uses two modules (PGGen and CLA8), array instantiation, explicit AND/OR/XOR/BUF primitives, and the same intermediate e[35:0] wiring scheme.
+
+```
+module PGGen(
+    input  a,
+    input  b,
+    output g,
+    output p
+);
+    // generate = a AND b
+    and (g, a, b);
+    // propagate = a XOR b
+    xor (p, a, b);
+endmodule
+
+
+module CLA8(
+    input  [7:0] a,
+    input  [7:0] b,
+    output [7:0] sum,
+    output       cout
+);
+    // Internal nets
+    wire         cin;
+    wire   [7:0] g, p;      // generate and propagate bits
+    wire   [7:0] c;         // carries into each bit
+    wire  [35:0] e;         // intermediate AND terms
+
+    // Tie internal carry‐in to 0
+    buf buf_cin (cin, 1'b0);
+
+    // Generate and propagate for each bit
+    PGGen pggen [7:0] (
+        .a(a),
+        .b(b),
+        .g(g),
+        .p(p)
+    );
+
+    // Carry lookahead product terms and OR trees
+    // c[0] = g0 OR (p0 & cin)
+    and  (e[0],    cin,      p[0]);
+    or   (c[0],    g[0],     e[0]);
+
+    // c[1] = g1 OR (p1&g0) OR (p1&p0&cin)
+    and  (e[1],    g[0],     p[1]);
+    and  (e[2],    cin,      p[0], p[1]);
+    or   (c[1],    g[1],     e[1], e[2]);
+
+    // c[2] = g2 OR (p2&g1) OR (p2&p1&g0) OR (p2&p1&p0&cin)
+    and  (e[3],    g[1],     p[2]);
+    and  (e[4],    g[0],     p[1], p[2]);
+    and  (e[5],    cin,      p[0], p[1], p[2]);
+    or   (c[2],    g[2],     e[3], e[4], e[5]);
+
+    // c[3] = g3 OR p3&g2 OR p3&p2&g1 OR p3&p2&p1&g0 OR p3&p2&p1&p0&cin
+    and  (e[6],    g[2],     p[3]);
+    and  (e[7],    g[1],     p[2], p[3]);
+    and  (e[8],    g[0],     p[1], p[2], p[3]);
+    and  (e[9],    cin,      p[0], p[1], p[2], p[3]);
+    or   (c[3],    g[3],     e[6], e[7], e[8], e[9]);
+
+    // c[4] = g4 OR p4&g3 OR p4&p3&g2 OR p4&p3&p2&g1 OR p4&p3&p2&p1&g0 OR p4&p3&p2&p1&p0&cin
+    and  (e[10],   g[3],     p[4]);
+    and  (e[11],   g[2],     p[3], p[4]);
+    and  (e[12],   g[1],     p[2], p[3], p[4]);
+    and  (e[13],   g[0],     p[1], p[2], p[3], p[4]);
+    and  (e[14],   cin,      p[0], p[1], p[2], p[3], p[4]);
+    or   (c[4],    g[4],     e[10], e[11], e[12], e[13], e[14]);
+
+    // c[5] = g5 OR p5&g4 OR p5&p4&g3 OR ... OR p5&p4&p3&p2&p1&p0&cin
+    and  (e[15],   g[4],     p[5]);
+    and  (e[16],   g[3],     p[4], p[5]);
+    and  (e[17],   g[2],     p[3], p[4], p[5]);
+    and  (e[18],   g[1],     p[2], p[3], p[4], p[5]);
+    and  (e[19],   g[0],     p[1], p[2], p[3], p[4], p[5]);
+    and  (e[20],   cin,      p[0], p[1], p[2], p[3], p[4], p[5]);
+    or   (c[5],    g[5],     e[15], e[16], e[17], e[18], e[19], e[20]);
+
+    // c[6] = g6 OR p6&g5 OR p6&p5&g4 OR ... OR p6&p5&p4&p3&p2&p1&p0&cin
+    and  (e[21],   g[5],     p[6]);
+    and  (e[22],   g[4],     p[5], p[6]);
+    and  (e[23],   g[3],     p[4], p[5], p[6]);
+    and  (e[24],   g[2],     p[3], p[4], p[5], p[6]);
+    and  (e[25],   g[1],     p[2], p[3], p[4], p[5], p[6]);
+    and  (e[26],   g[0],     p[1], p[2], p[3], p[4], p[5], p[6]);
+    and  (e[27],   cin,      p[0], p[1], p[2], p[3], p[4], p[5], p[6]);
+    or   (c[6],    g[6],     e[21], e[22], e[23], e[24], e[25], e[26], e[27]);
+
+    // c[7] = g7 OR p7&g6 OR p7&p6&g5 OR ... OR p7&p6&p5&p4&p3&p2&p1&p0&cin
+    and  (e[28],   g[6],     p[7]);
+    and  (e[29],   g[5],     p[6], p[7]);
+    and  (e[30],   g[4],     p[5], p[6], p[7]);
+    and  (e[31],   g[3],     p[4], p[5], p[6], p[7]);
+    and  (e[32],   g[2],     p[3], p[4], p[5], p[6], p[7]);
+    and  (e[33],   g[1],     p[2], p[3], p[4], p[5], p[6], p[7]);
+    and  (e[34],   g[0],     p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+    and  (e[35],   cin,      p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]);
+    or   (c[7],    g[7],     e[28], e[29], e[30], e[31], e[32], e[33], e[34], e[35]);
+
+    // Sum bits
+    xor (sum[0], p[0], cin);
+    xor xsum [7:1] (sum[7:1], p[7:1], c[6:0]);
+
+    // Final carry‐out
+    buf buf_cout (cout, c[7]);
+
+endmodule
+```
