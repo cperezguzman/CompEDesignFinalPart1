@@ -1,0 +1,165 @@
+module tb_CLA8;
+
+    // Testbench Signals
+    reg [7:0] a;
+    reg [7:0] b;
+    wire [7:0] sum;
+    wire cout;
+    integer passed_tests = 0;
+    integer failed_tests = 0;
+
+    // Instantiate the DUT (Device Under Test)
+    CLA8 uut (
+        .a(a),
+        .b(b),
+        .sum(sum),
+        .cout(cout)
+    );
+
+    initial begin
+        $display("Running testbench for CLA8...");
+
+        // Test case 1: All zeros
+        a = 8'b00000000;
+        b = 8'b00000000;
+        #10;
+        $display("Test 1: a=%b, b=%b", a, b);
+        check_outputs(0, 0, 0, 0);
+
+        // Test case 2: All ones
+        a = 8'b11111111;
+        b = 8'b11111111;
+        #10;
+        $display("Test 2: a=%b, b=%b", a, b);
+        check_outputs(254, 1, 8'b11111111, 8'b11111111);
+
+        // Test case 3: One operand is zero
+        a = 8'b00000000;
+        b = 8'b11111111;
+        #10;
+        $display("Test 3: a=%b, b=%b", a, b);
+        check_outputs(0, 0, 0, 0);
+
+        // Test case 4: One operand is the maximum value
+        a = 8'b11111111;
+        b = 8'b00000000;
+        #10;
+        $display("Test 4: a=%b, b=%b", a, b);
+        check_outputs(255, 0, 8'b11111111, 8'b00000000);
+
+        // Test case 5: Alternating bits
+        a = 8'b10101010;
+        b = 8'b01010101;
+        #10;
+        $display("Test 5: a=%b, b=%b", a, b);
+        check_outputs(255, 0, 8'b10101010, 8'b01010101);
+
+        // Test case 6: Alternating bits (reverse)
+        a = 8'b01010101;
+        b = 8'b10101010;
+        #10;
+        $display("Test 6: a=%b, b=%b", a, b);
+        check_outputs(255, 0, 8'b01010101, 8'b10101010);
+
+        // Test case 7: Boundary value - LSB only
+        a = 8'b00000001;
+        b = 8'b00000001;
+        #10;
+        $display("Test 7: a=%b, b=%b", a, b);
+        check_outputs(2, 0, 1, 1);
+
+        // Test case 8: Boundary value - MSB only
+        a = 8'b10000000;
+        b = 8'b10000000;
+        #10;
+        $display("Test 8: a=%b, b=%b", a, b);
+        check_outputs(0, 1, 128, 128);
+
+        // Test case 9: Typical case #1
+        a = 8'b00110011;
+        b = 8'b11001100;
+        #10;
+        $display("Test 9: a=%b, b=%b", a, b);
+        check_outputs(255, 0, 51, 204);
+
+        // Test case 10: Typical case #2
+        a = 8'b01100110;
+        b = 8'b10011001;
+        #10;
+        $display("Test 10: a=%b, b=%b", a, b);
+        check_outputs(255, 0, 102, 153);
+
+        // Test case 11: Overflow (edge case)
+        a = 8'b11111111;
+        b = 8'b00000001;
+        #10;
+        $display("Test 11: a=%b, b=%b", a, b);
+        check_outputs(0, 1, 8'b11111111, 1);
+
+        // Test case 12: Overflow (edge case #2)
+        a = 8'b10000000;
+        b = 8'b10000000;
+        #10;
+        $display("Test 12: a=%b, b=%b", a, b);
+        check_outputs(0, 1, 128, 128);
+
+        // Test case 13: Random test case #1
+        a = 8'b01011011;
+        b = 8'b10100100;
+        #10;
+        $display("Test 13: a=%b, b=%b", a, b);
+        check_outputs(255, 0, 91, 164);
+
+        // Test case 14: Random test case #2
+        a = 8'b00101110;
+        b = 8'b11010001;
+        #10;
+        $display("Test 14: a=%b, b=%b", a, b);
+        check_outputs(255, 0, 46, 209);
+
+        // Test case 15: Random test case #3
+        a = 8'b11100011;
+        b = 8'b00011100;
+        #10;
+        $display("Test 15: a=%b, b=%b", a, b);
+        check_outputs(255, 0, 227, 28);
+
+        // Test case 16: Random test case #4
+        a = 8'b01101101;
+        b = 8'b10010010;
+        #10;
+        $display("Test 16: a=%b, b=%b", a, b);
+        check_outputs(255, 0, 109, 146);
+
+        $display("\nTest Summary:");
+        $display("Total Tests Run: %d", passed_tests + failed_tests);
+        $display("Passed: %d", passed_tests);
+        $display("Failed: %d", failed_tests);
+
+        $finish;
+    end
+
+    task check_outputs;
+        input [7:0] expected_sum;
+        input expected_cout;
+        input [7:0] expected_a;
+        input [7:0] expected_b;
+        begin
+            if (sum === expected_sum) begin
+                $display("SUM: Pass (Expected: %b, Actual: %b)", expected_sum, sum);
+                passed_tests = passed_tests + 1;
+            end else begin
+                $display("SUM: Fail (Expected: %b, Actual: %b)", expected_sum, sum);
+                failed_tests = failed_tests + 1;
+            end
+            if (cout === expected_cout) begin
+                $display("COUT: Pass (Expected: %b, Actual: %b)", expected_cout, cout);
+                passed_tests = passed_tests + 1;
+            end else begin
+                $display("COUT: Fail (Expected: %b, Actual: %b)", expected_cout, cout);
+                failed_tests = failed_tests + 1;
+            end
+        end
+    endtask
+
+endmodule
